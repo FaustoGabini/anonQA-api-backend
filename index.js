@@ -1,48 +1,56 @@
+require("dotenv").config(); /* Importa la Libreria para usar var de entorno */
+require("./mongo.js");
+
 const express = require("express");
 const cors = require("cors");
-
 const app = express();
+const Question = require("./models/Question");
+
 app.use(cors());
 app.use(express.json());
 
-let questions = [
-  { id: 1, body: "Esta es una pregunta" },
-  { id: 2, body: "Esta es otra pregunta" },
-  { id: 3, body: "Ya no se que mas poner" },
-  { id: 4, body: "Vo si que sos crack" },
-  {
-    id: 5,
-    body: "Te vas amor si asi lo quieras que puedo hacer",
-  },
-];
+let questions = [];
 
 app.get("/", (request, response) => {
   response.send("<h1>Hello World</h1>");
 });
 
 app.get("/api/questions", (request, response) => {
-  response.json(questions);
+  Question.find({}).then((questions) => {
+    response.json(questions);
+  });
 });
 
 app.get("/api/questions/:id", (request, response) => {
-  const id = Number(request.params.id);
-  const question = questions.find(
-    (question) => question.id === id
-  );
-
-  if (question) {
-    response.json(question);
-  } else {
-    response.status(404).end();
-  }
+  const id = request.params.id;
+  Question.findById(id)
+    .then((question) => {
+      if (question) {
+        response.json(question);
+      } else {
+        response.status(404).end();
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+      response.status(400).send({
+        error: "El formato del id no es correcto",
+      }); /* Error nuesto */
+    });
 });
 
 app.delete("/api/questions/:id", (request, response) => {
-  const id = Number(request.params.id);
+  const id = request.params.id;
 
-  questions = questions.filter(
-    (question) => question.id != id
-  );
+  Question.findByIdAndRemove(id)
+    .then((result) => {
+      response.status(204).end();
+    })
+    .catch((error) => {
+      response.status(400).send({
+        error: "El formato del id no es correcto",
+      });
+    });
 
   response.status(204).end();
 });
@@ -50,19 +58,24 @@ app.delete("/api/questions/:id", (request, response) => {
 app.post("/api/questions", (request, response) => {
   const question = request.body;
 
-  const ids = questions.map((note) => note.id);
-  const maxId = Math.max(...ids);
-  const newQuestion = {
-    id: maxId + 1,
+  if (!question.body) {
+    return response.status(400).json({
+      error: "required body field is missing",
+    });
+  }
+
+  const newQuestion = new Question({
     body: question.body,
-  };
+    date: new Date(),
+    response: "",
+  });
 
-  questions = [...questions, newQuestion];
-
-  response.json(newQuestion);
+  newQuestion.save().then((savedQuestion) => {
+    response.json(savedQuestion);
+  });
 });
-
-const PORT = process.env.PORT || 3001;
+/* https://shrouded-sierra-15470.herokuapp.com/ */
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
