@@ -16,9 +16,11 @@ app.get("/", (request, response) => {
 });
 
 app.get("/api/questions", (request, response) => {
-  Question.find({}).then((questions) => {
-    response.json(questions);
-  });
+  Question.find({})
+    .sort({ _id: -1 })
+    .then((questions) => {
+      response.json(questions);
+    });
 });
 
 app.get("/api/questions/:id", (request, response) => {
